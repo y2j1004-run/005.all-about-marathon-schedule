@@ -83,7 +83,10 @@ tests/              로직 테스트
 
 ## 배포 (GitHub Pages)
 
-저장소 **Settings → Pages**에서 브랜치와 `/ (root)` 폴더를 선택하면 바로 배포됩니다.
+배포 주소: **https://y2j1004-run.github.io/005.all-about-marathon-schedule/**
+
+`.github/workflows/pages.yml`이 `ccr-3a5cbc65-x71nne` 브랜치에 push될 때마다 테스트 후 자동 배포합니다.
+(저장소 Settings → Pages → Source: **GitHub Actions** 설정 필요 · 수동 실행: Actions → “GitHub Pages 배포” → Run workflow)
 
 ## 데이터 저장
 
