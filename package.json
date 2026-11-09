@@ -1,0 +1,11 @@
+{
+  "name": "all-about-marathon-schedule",
+  "version": "1.0.0",
+  "description": "대한민국·일본·중국 주요 마라톤 대회 소개 및 신청 일정 관리 앱",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "python3 -m http.server 8080",
+    "test": "node --test tests/*.test.js"
+  }
+}

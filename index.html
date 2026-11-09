@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>마라톤 일정 매니저</title>
+  <meta name="description" content="대한민국·일본·중국 주요 마라톤 대회 소개, 접수 일정, 신청 방법을 한눈에 관리하는 앱" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏃</text></svg>" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">🏃 <span>마라톤 일정 매니저</span></div>
+    <nav class="tabs" role="tablist">
+      <button class="tab active" data-view="dashboard" role="tab">대시보드</button>
+      <button class="tab" data-view="list" role="tab">대회 목록</button>
+      <button class="tab" data-view="calendar" role="tab">캘린더</button>
+      <button class="tab" data-view="mine" role="tab">내 대회</button>
+    </nav>
+  </header>
+
+  <main id="app">
+    <!-- 대시보드 -->
+    <section id="view-dashboard" class="view active">
+      <p class="notice">
+        ⚠️ 표시된 일정·참가비는 예년 패턴 기반 <b>예상치</b>입니다. 공식 요강 발표 후 각 대회의
+        <b>“일정 수정”</b>으로 확정 일정을 입력하세요.
+      </p>
+      <div class="stats" id="stats"></div>
+      <div class="grid2">
+        <div class="panel">
+          <h2>🟢 지금 접수 중</h2>
+          <ul class="mini-list" id="dash-open"></ul>
+        </div>
+        <div class="panel">
+          <h2>⏰ 곧 접수 시작</h2>
+          <ul class="mini-list" id="dash-soon"></ul>
+        </div>
+        <div class="panel">
+          <h2>🏁 다가오는 대회</h2>
+          <ul class="mini-list" id="dash-race"></ul>
+        </div>
+        <div class="panel">
+          <h2>⭐ 내 관심·신청 대회</h2>
+          <ul class="mini-list" id="dash-mine"></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 대회 목록 -->
+    <section id="view-list" class="view">
+      <div class="filters">
+        <input type="search" id="f-query" placeholder="대회명·도시 검색" aria-label="검색" />
+        <select id="f-country" aria-label="국가">
+          <option value="ALL">전체 국가</option>
+          <option value="KR">🇰🇷 대한민국</option>
+          <option value="JP">🇯🇵 일본</option>
+          <option value="CN">🇨🇳 중국</option>
+        </select>
+        <select id="f-status" aria-label="접수 상태">
+          <option value="ALL">전체 상태</option>
+          <option value="reg_open">접수 중</option>
+          <option value="upcoming_reg">접수 예정</option>
+          <option value="reg_closed">접수 마감</option>
+        </select>
+        <select id="f-method" aria-label="신청 방식">
+          <option value="ALL">전체 방식</option>
+          <option value="lottery">추첨</option>
+          <option value="firstcome">선착순</option>
+          <option value="mixed">혼합</option>
+        </select>
+        <select id="f-month" aria-label="개최 월"></select>
+        <select id="f-sort" aria-label="정렬">
+          <option value="race">대회일순</option>
+          <option value="reg">접수 임박순</option>
+          <option value="name">이름순</option>
+        </select>
+        <label class="chk"><input type="checkbox" id="f-fav" /> ⭐만</label>
+      </div>
+      <div class="toolbar">
+        <span id="list-count"></span>
+        <div class="spacer"></div>
+        <button class="btn" id="btn-add">＋ 대회 추가</button>
+        <button class="btn" id="btn-ics-list">📅 목록 캘린더(.ics) 내보내기</button>
+      </div>
+      <div class="cards" id="cards"></div>
+    </section>
+
+    <!-- 캘린더 -->
+    <section id="view-calendar" class="view">
+      <div class="cal-head">
+        <button class="btn" id="cal-prev" aria-label="이전 달">◀</button>
+        <h2 id="cal-title"></h2>
+        <button class="btn" id="cal-next" aria-label="다음 달">▶</button>
+        <button class="btn" id="cal-today">오늘</button>
+      </div>
+      <div class="legend">
+        <span class="ev race">대회일</span><span class="ev open">접수 시작</span><span class="ev close">접수 마감</span><span class="ev result">결과 발표</span>
+      </div>
+      <div class="calendar" id="calendar"></div>
+    </section>
+
+    <!-- 내 대회 -->
+    <section id="view-mine" class="view">
+      <div class="toolbar">
+        <select id="m-status" aria-label="내 상태"></select>
+        <div class="spacer"></div>
+        <button class="btn" id="btn-export">💾 백업(JSON)</button>
+        <label class="btn">📂 복원<input type="file" id="file-import" accept="application/json" hidden /></label>
+        <button class="btn danger" id="btn-reset">초기화</button>
+      </div>
+      <div class="table-wrap">
+        <table class="mine-table">
+          <thead>
+            <tr><th>대회</th><th>대회일</th><th>상태</th><th>내 진행</th><th>목표/기록</th></tr>
+          </thead>
+          <tbody id="mine-body"></tbody>
+        </table>
+      </div>
+      <p class="hint">대회 카드에서 ⭐를 누르거나 ‘내 진행’ 상태를 지정하면 이곳에 모입니다. 데이터는 이 브라우저(localStorage)에만 저장되니 주기적으로 백업하세요.</p>
+    </section>
+  </main>
+
+  <dialog id="modal">
+    <div class="modal-body" id="modal-body"></div>
+  </dialog>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
