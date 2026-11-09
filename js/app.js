@@ -1,7 +1,7 @@
-import { RACES, COUNTRIES, METHODS, KR_ALIASES } from './data.js';
+import { RACES, COUNTRIES, METHODS } from './data.js';
 import {
   getStatus, mergeEdition, filterItems, sortItems, eventsForMonth,
-  buildICS, validateBackup, todayISO, STATUS, mergeScraped,
+  buildICS, validateBackup, todayISO, STATUS,
 } from './logic.js';
 import { store, MY_STATUS } from './store.js';
 
@@ -37,51 +37,15 @@ function download(filename, text, type) {
 // ───────────── 데이터 조합 ─────────────
 const TODAY = todayISO();
 
-// marathon.pe.kr 에서 매일 수집되는 국내 대회 (data/kr-races.json)
-const scraped = { updatedAt: null, raceDates: {}, extra: [] };
-
-async function loadScraped() {
-  try {
-    const res = await fetch('data/kr-races.json', { cache: 'no-cache' });
-    if (!res.ok) return;
-    const json = await res.json();
-    const { raceDates, extra } = mergeScraped(RACES, json.races, KR_ALIASES, TODAY);
-    Object.assign(scraped, { updatedAt: json.updatedAt, raceDates, extra });
-  } catch {
-    /* 수집 데이터가 없어도 기본 데이터로 동작 */
-  }
-}
-
-const PREF_KEY = 'aams.showAllKR';
-function loadPref() {
-  try { return localStorage.getItem(PREF_KEY) === '1'; } catch { return false; }
-}
-
 function allRaces() {
-  return [...RACES, ...store.get().customRaces, ...scraped.extra];
-}
-
-function editionFor(race) {
-  const override = store.getOverride(race.id);
-  const base = mergeEdition(race, override);
-  const s = scraped.raceDates[race.id];
-  // 사용자가 직접 수정한 일정이 없을 때만 수집한 대회일 반영
-  if (s && !override) return { ...base, raceDate: s.raceDate, raceDateFrom: 'marathon.pe.kr' };
-  return base;
+  return [...RACES, ...store.get().customRaces];
 }
 
 function buildItems() {
   return allRaces().map((race) => {
-    const edition = editionFor(race);
-    const info = getStatus(edition, TODAY);
-    if (edition.raceDateFrom) info.edition.raceDateFrom = edition.raceDateFrom;
-    return { race, info, user: store.getUser(race.id) };
+    const edition = mergeEdition(race, store.getOverride(race.id));
+    return { race, info: getStatus(edition, TODAY), user: store.getUser(race.id) };
   });
-}
-
-/** 수집 대회는 '국내 전체 대회 표시'를 켰거나 관심/진행 중일 때만 노출 */
-function isVisible({ race, user }) {
-  return !race.source || ui.showAllKR || user.favorite || (user.myStatus && user.myStatus !== 'none');
 }
 
 const ui = {
@@ -89,7 +53,6 @@ const ui = {
   filters: { query: '', country: 'ALL', status: 'ALL', method: 'ALL', month: 'ALL', favoritesOnly: false },
   sort: 'race',
   myStatus: 'ALL',
-  showAllKR: loadPref(),
   cal: (() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() + 1 }; })(),
 };
 
@@ -97,9 +60,7 @@ const ui = {
 const flag = (c) => COUNTRIES[c]?.flag || '🏳️';
 const statusBadge = (info) => `<span class="badge b-${info.status}">${info.label}</span>`;
 const estBadge = (e) =>
-  e.raceDateFrom
-    ? `<span class="badge b-ok">대회일 확인</span> <span class="badge b-est">${e.regOpen ? '접수 예상' : '접수 요강 확인'}</span>`
-    : e.confirmed
+  e.confirmed
     ? '<span class="badge b-ok">확정</span>'
     : `<span class="badge b-est">${e.projected ? '예년 기준 추정' : '예상'}</span>`;
 
@@ -116,7 +77,7 @@ const emptyLi = (t) => `<li class="empty">${t}</li>`;
 function renderDashboard(items) {
   const open = sortItems(items.filter((i) => i.info.status === STATUS.REG_OPEN), 'reg');
   const soon = sortItems(items.filter((i) => i.info.status === STATUS.UPCOMING_REG && i.info.daysToOpen <= 90), 'reg');
-  const races = sortItems(items.filter((i) => (!i.race.source || i.user.favorite) && i.info.daysToRace >= 0 && i.info.daysToRace <= 120), 'race');
+  const races = sortItems(items.filter((i) => i.info.daysToRace >= 0 && i.info.daysToRace <= 120), 'race');
   const mine = sortItems(items.filter((i) => i.user.favorite || (i.user.myStatus && i.user.myStatus !== 'none')), 'race');
 
   const byCountry = (c) => items.filter((i) => i.race.country === c).length;
@@ -232,14 +193,10 @@ function openDetail(id) {
         ${e.resultDate ? `<div class="t"><small>추첨 결과</small>${fmt(e.resultDate)}</div>` : ''}
         <div class="t"><small>대회일</small><b>${fmt(e.raceDate)}</b></div>
       </div>
-      <p class="hint">${[
-        race.typical && `예년 개최 시기: ${esc(race.typical)}`,
-        e.raceDateFrom && `대회일은 <a href="http://marathon.pe.kr/index_calendar.html" target="_blank" rel="noopener">marathon.pe.kr</a> 일정 기준`,
-        !e.confirmed && !e.raceDateFrom && '공식 요강 발표 전 예상 일정입니다.',
-      ].filter(Boolean).join(' · ')}</p>
+      <p class="hint">예년 개최 시기: ${esc(race.typical || '-')}${e.confirmed ? '' : ' · 공식 요강 발표 전 예상 일정입니다.'}</p>
     </div>
 
-    <div class="section"><h4>🏃 대회 소개</h4><p>${esc(race.intro || '')}</p>${race.highlights?.length ? list(race.highlights) : ''}</div>
+    <div class="section"><h4>🏃 대회 소개</h4><p>${esc(race.intro || '')}</p>${list(race.highlights)}</div>
     <div class="section"><h4>📋 기본 정보</h4>
       <dl class="meta">
         <dt>종목</dt><dd>${esc((race.distances || []).join(', '))}</dd>
@@ -250,7 +207,7 @@ function openDetail(id) {
       </dl>
     </div>
     <div class="section"><h4>📝 신청 방법</h4>${list(race.howToApply, 'ol')}</div>
-    ${race.foreignerTips?.length ? `<div class="section"><h4>✈️ 참가 팁</h4>${list(race.foreignerTips)}</div>` : ''}
+    <div class="section"><h4>✈️ 참가 팁</h4>${list(race.foreignerTips)}</div>
 
     <div class="section"><h4>⭐ 내 진행 관리</h4>
       <form class="form-grid" id="my-form">
@@ -387,16 +344,11 @@ function openRaceForm(existing) {
 
 // ───────────── 렌더 & 이벤트 ─────────────
 function render() {
-  const all = buildItems();
-  const items = all.filter(isVisible);
+  const items = buildItems();
   renderDashboard(items);
   renderList(items);
   renderCalendar(items);
-  renderMine(all);
-  const n = scraped.extra.length;
-  $('#kr-sync').textContent = scraped.updatedAt
-    ? `국내 대회 일정: marathon.pe.kr 기준 ${new Date(scraped.updatedAt).toLocaleDateString('ko-KR')} 갱신 · 추가 수집 ${n}개`
-    : '국내 대회 자동 수집 데이터가 아직 없습니다.';
+  renderMine(items);
 }
 
 function setView(v) {
@@ -469,17 +421,8 @@ function init() {
     if (confirm('관심 대회·메모·수정한 일정·추가한 대회가 모두 삭제됩니다. 계속할까요?')) { store.reset(); toast('초기화했습니다.'); }
   };
 
-  const tg = $('#t-allkr');
-  tg.checked = ui.showAllKR;
-  tg.addEventListener('input', () => {
-    ui.showAllKR = tg.checked;
-    try { localStorage.setItem(PREF_KEY, tg.checked ? '1' : '0'); } catch {}
-    render();
-  });
-
   store.subscribe(render);
   render();
-  loadScraped().then(render);
 }
 
 init();
