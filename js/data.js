@@ -33,6 +33,17 @@ export const METHODS = {
   lottery: '추첨',
   firstcome: '선착순',
   mixed: '혼합(선착순·기록·추첨)',
+  unknown: '확인 필요',
+};
+
+// marathon.pe.kr 에서 수집한 대회명을 아래 주요 대회와 매칭하기 위한 키워드
+// (공백 제거·소문자 기준, exclude 단어가 있으면 매칭하지 않음)
+export const KR_ALIASES = {
+  'seoul-marathon': { include: ['동아마라톤', '서울마라톤'], exclude: ['jtbc', '하프', '10k'] },
+  'jtbc-seoul': { include: ['jtbc'], exclude: [] },
+  chuncheon: { include: ['춘천마라톤'], exclude: [] },
+  daegu: { include: ['대구마라톤'], exclude: ['하프'] },
+  gyeongju: { include: ['경주국제마라톤'], exclude: [] },
 };
 
 export const RACES = [

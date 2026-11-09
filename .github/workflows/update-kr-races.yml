@@ -1,0 +1,43 @@
+name: 국내 대회 일정 갱신 (marathon.pe.kr)
+
+on:
+  schedule:
+    # 매일 06:17 KST (21:17 UTC) — 정각 혼잡 시간을 피해 분 단위를 조정
+    - cron: '17 21 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-kr-races
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: 파서 테스트
+        run: npm test
+
+      - name: marathon.pe.kr 에서 일정 가져오기
+        run: node scripts/update-kr-races.mjs
+
+      - name: 변경 시 커밋
+        run: |
+          if git diff --quiet -- data/kr-races.json; then
+            echo "변경 사항 없음"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/kr-races.json
+          git commit -m "chore(data): 국내 대회 일정 자동 갱신 ($(TZ=Asia/Seoul date +%F))"
+          git push

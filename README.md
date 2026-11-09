@@ -33,6 +33,29 @@
 - 대회일이 지나면 앱이 자동으로 **다음 해 일정을 추정**합니다(같은 달 같은 주차 요일 기준, "예년 기준 추정" 배지 표시).
 - 모든 사용자에게 반영하려면 `js/data.js`의 `edition` 값을 갱신하고 `confirmed: true`로 바꾸세요.
 
+## 🇰🇷 국내 대회 자동 갱신 (marathon.pe.kr)
+
+[marathon.pe.kr 대회 일정](http://marathon.pe.kr/index_calendar.html)을 **매일 1회(06:17 KST)** 읽어
+`data/kr-races.json`을 갱신합니다. (`.github/workflows/update-kr-races.yml`)
+
+- 주요 대회(서울·JTBC·춘천·대구·경주)와 이름이 일치하고 예상 대회일 ±60일 이내이면 → 해당 대회의 **대회일을 갱신**
+  ("대회일 확인" 배지). 사용자가 직접 "일정 수정"한 값이 있으면 그 값이 우선합니다.
+- 그 외 국내 대회는 별도 항목으로 추가되며, 목록의 **“🇰🇷 국내 전체 대회 표시”**를 켜면 목록·캘린더에 나타납니다.
+- 접수 기간·참가비는 목록 페이지에 없으므로 각 대회 요강에서 확인해야 합니다.
+- **안전장치**: 가져오기 실패 또는 파싱 결과가 5개 미만이면 기존 데이터를 그대로 두고 워크플로를 실패 처리합니다
+  (GitHub에서 실패 알림 메일 수신).
+
+수동 실행: GitHub → Actions → “국내 대회 일정 갱신” → **Run workflow**
+
+```bash
+node scripts/update-kr-races.mjs --dry-run          # 사이트에서 받아 결과만 확인
+node scripts/update-kr-races.mjs --file saved.html  # 브라우저에서 저장한 HTML로 파서 점검/갱신
+```
+
+> 사이트가 해외 IP 접속을 차단하면 GitHub 호스팅 러너(미국)에서 실패할 수 있습니다.
+> 이 경우 국내 PC에 [self-hosted runner](https://docs.github.com/actions/hosting-your-own-runners)를 등록하고
+> 워크플로의 `runs-on`을 `self-hosted`로 바꾸거나, 국내 PC의 작업 스케줄러/cron으로 위 스크립트를 실행 후 커밋하세요.
+
 ## 실행 방법
 
 ES Modules를 사용하므로 `file://`로 직접 열지 말고 로컬 서버로 실행하세요.
@@ -60,7 +83,10 @@ js/data.js          대회 기본 데이터 (여기를 수정해 대회 추가·
 js/logic.js         순수 로직: 접수 상태·D-day 계산, 다음 회차 추정, 필터/정렬, ICS 생성
 js/store.js         localStorage 저장소 (관심·진행상태·메모·일정 수정·사용자 대회)
 js/app.js           UI 렌더링 및 이벤트 처리
-tests/              로직 테스트
+data/kr-races.json  marathon.pe.kr 에서 매일 수집한 국내 대회 (자동 생성)
+scripts/            수집 스크립트 (parse-calendar.mjs 파서, update-kr-races.mjs 실행)
+.github/workflows/  매일 자동 갱신 워크플로
+tests/              로직·파서 테스트
 ```
 
 ## 대회 데이터 추가하기
